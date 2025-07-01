@@ -1,0 +1,15 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "redart15.redtrees.mixin",
+  "compatibilityLevel": "JAVA_8",
+  "mixins": [
+    "SaplingBirchMixin",
+    "SaplingCacaoMixin"
+  ],
+  "client": [
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

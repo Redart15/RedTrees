@@ -19,20 +19,20 @@
   "environment": "*",
   "entrypoints": {
     "main": [
-			"turniplabs.examplemod.ExampleMod"
+      "redart15.redtrees.RedTrees"
     ],
 		"beforeGameStart": [
-			"turniplabs.examplemod.ExampleMod"
+          "redart15.redtrees.RedTrees"
 		],
 		"afterGameStart": [
-			"turniplabs.examplemod.ExampleMod"
+          "redart15.redtrees.RedTrees"
 		],
 		"recipesReady": [
-			"turniplabs.examplemod.ExampleMod"
+          "redart15.redtrees.RedTrees"
 		]
 	},
   "mixins": [
-      "examplemod.mixins.json"
+		"redtrees.mixins.json"
   ],
 
   "depends": {
