@@ -30,11 +30,13 @@ public abstract class SaplingCacaoMixin extends BlockLogicSaplingBase {
 		WorldFeature treeTall = new WorldFeatureTree(Blocks.LEAVES_CACAO.id(), Blocks.LOG_OAK_MOSSY.id(), 10);
 		WorldFeature treeTowering = new RedWorldFeatureToweringTree(Blocks.LEAVES_CACAO.id(), Blocks.LOG_OAK_MOSSY.id(),Blocks.SAPLING_CACAO.id());
 
-		world.setBlock(x, y, z, 0);
-		if(!treeSmall.place(world,random,x,y,z) && !treeTall.place(world,random,x,y,z)){
-			world.setBlock(x, y, z, this.id());
+		if(!treeTowering.place(world,random,x,y,z)){
+			world.setBlock(x, y, z, 0);
+			if(!treeSmall.place(world,random,x,y,z) && !treeTall.place(world,random,x,y,z)){
+				world.setBlock(x, y, z, this.id());
+			}
 		}
-		treeTowering.place(world,random,x,y,z);
+
 		ci.cancel();
 	}
 }
