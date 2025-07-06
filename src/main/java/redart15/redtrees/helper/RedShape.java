@@ -18,8 +18,6 @@ public class RedShape {
 				PointList.addAll(voxelCircle(w, l, circleRadius, h + y));
 			}
 		}
-
-
 		return addCenterPoint(PointList, cx, cy, cz);
 	}
 
