@@ -1,9 +1,6 @@
 package redart15.redtrees.mixin;
 
-import net.minecraft.core.block.Block;
-import net.minecraft.core.block.BlockLogicSaplingBase;
-import net.minecraft.core.block.BlockLogicSaplingBirch;
-import net.minecraft.core.block.Blocks;
+import net.minecraft.core.block.*;
 import net.minecraft.core.world.World;
 import net.minecraft.core.world.generate.feature.WorldFeature;
 import net.minecraft.core.world.generate.feature.tree.WorldFeatureTree;
@@ -16,11 +13,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.util.Random;
 
 @Mixin(value = BlockLogicSaplingBirch.class,remap = false)
-public abstract class SaplingBirchMixin extends BlockLogicSaplingBase {
-
-	public SaplingBirchMixin(Block<?> block) {
-		super(block);
-	}
+public abstract class SaplingBirchMixin{
 
 	@Inject(
 		method = "growTree(Lnet/minecraft/core/world/World;IIILjava/util/Random;)V",
@@ -32,7 +25,7 @@ public abstract class SaplingBirchMixin extends BlockLogicSaplingBase {
 		WorldFeature treeSmall = new WorldFeatureTree(Blocks.LEAVES_BIRCH.id(), Blocks.LOG_BIRCH.id(), 5);
 		world.setBlock(x, y, z, 0);
 		if (!treeSmall.place(world, random, x, y, z) && !treeTall.place(world, random, x, y, z)) {
-			world.setBlock(x, y, z, this.id());
+			world.setBlock(x, y, z, ((BlockLogicSaplingBirch)(Object)this).id());
 		}
 		ci.cancel();
 	}

@@ -1,10 +1,9 @@
 package redart15.redtrees.worldfeatures;
 
-import net.minecraft.core.block.Block;
-import net.minecraft.core.block.Blocks;
+import net.minecraft.core.block.*;
 import net.minecraft.core.block.tag.BlockTags;
-import net.minecraft.core.util.helper.MathHelper;
 import net.minecraft.core.world.World;
+import net.minecraft.core.world.chunk.ChunkPosition;
 import net.minecraft.core.world.generate.feature.MethodParametersAnnotation;
 import net.minecraft.core.world.generate.feature.WorldFeature;
 
@@ -20,27 +19,13 @@ public class RedWorldFeatureToweringTree extends WorldFeature {
 	public int saplingID;
 	public int treeHeight;
 	public int trunkHeight;
-	int offsetX;
-	int offsetZ;
-	int x;
-	int y;
-	int z;
+	public ChunkPosition position;
 
-	public static int[][] offsets = {{0, 0}, {0, -1}, {-1, -1}, {-1, 0}};
-	public static int[] leaveIDs = {
-		Blocks.LEAVES_BIRCH.id(),
-		Blocks.LEAVES_CACAO.id(),
-		Blocks.LEAVES_CHERRY.id(),
-		Blocks.LEAVES_CHERRY_FLOWERING.id(),
-		Blocks.LEAVES_EUCALYPTUS.id(),
-		Blocks.LEAVES_PALM.id(),
-		Blocks.LEAVES_PINE.id(),
-		Blocks.LEAVES_OAK.id(),
-		Blocks.LEAVES_OAK_RETRO.id(),
-		Blocks.LEAVES_SHRUB.id(),
-		Blocks.LEAVES_THORN.id(),
-	};
+//	int x;
+//	int z;
+//	int y;
 
+	public static int[][] offsets = {{0, 0}, {0, 1}, {1, 0}, {1, 1}};
 
 	@MethodParametersAnnotation(
 		names = {"leaveID", "logID", "saplingID"}
@@ -56,26 +41,23 @@ public class RedWorldFeatureToweringTree extends WorldFeature {
 		this.treeHeight = random.nextInt(10) + 22;
 		this.trunkHeight = treeHeight - 2;
 		this.world = world;
-		this.x = x;
-		this.y = y;
-		this.z = z;
 
 		if (y < 1 || y + treeHeight > world.getHeightBlocks()) {
 			return false;
 		}
 
-		// find the square of saplings
-		if (!getBlockSquareOffset()) {
+		// check if there is a 2x2 cluster of saplings
+		ChunkPosition position = findValid2x2SaplingCluster(world, x, y, z, saplingID);
+		if (position == null) {
 			return false;
 		}
-
+		this.position = position;
 		// temporary remove the saplings
-		place2x2Area(offsetX, y, offsetZ, 0);
+		place2x2Area(position.x, position.y, position.z, 0);
 		if (!canPlaceTree()) {
 			// if tree cannot be places put them back
-			place2x2Area(offsetX, y, offsetZ, saplingID);
+			place2x2Area(position.x, position.y, position.z, saplingID);
 		}
-
 		placeTree();
 		return true;
 	}
@@ -99,43 +81,27 @@ public class RedWorldFeatureToweringTree extends WorldFeature {
 		return true;
 	}
 
-	public void place2x2AreaWithNotify(int x, int y, int z, int blockID) {
-		world.setBlockWithNotify(x, y, z, blockID);
-		world.setBlockWithNotify(x, y, z + 1, blockID);
-		world.setBlockWithNotify(x + 1, y, z, blockID);
-		world.setBlockWithNotify(x + 1, y, z + 1, blockID);
-	}
-
-	public void onTreeGrown() {
-		Block<?>[] dirts = new Block<?>[4];
-		dirts[0] = getDirtForGrass(world.getBlockId(offsetX, y - 1, offsetZ));
-		dirts[1] = getDirtForGrass(world.getBlockId(offsetX, y - 1, offsetZ + 1));
-		dirts[2] = getDirtForGrass(world.getBlockId(offsetX + 1, y - 1, offsetZ));
-		dirts[3] = getDirtForGrass(world.getBlockId(offsetX + 1, y - 1, offsetZ + 1));
-		for (Block<?> dirt : dirts) {
-			if (dirt != null) {
-				world.setBlockWithNotify(x, y - 1, z, dirt.id());
-			}
-		}
-	}
-
 	/*TODO
-	*  Collect all the points
-	*  Designate some as branches
-	*  Check if branch with leaves can be placed
-	* */
+	 *  Collect all the points
+	 *  Designate some as branches
+	 *  Check if branch with leaves can be placed
+	 * */
+
 	public void texturingTrunk() {
 		int[][] sides = {{0, 0}, {0, 1}, {1, 0}, {1, 1}};
 		int prevIndex = 0;
 		for (int height = 0; height <= trunkHeight; height++) {
+			if (height < 6) {
+				continue;
+			}
 			int indexSide = random.nextInt(4);
 			if (indexSide == prevIndex) {
-				indexSide =  (indexSide + 3) % 4;
+				indexSide = (indexSide + 3) % 4;
 			}
 			int[] side = sides[indexSide];
-			int x = offsetX + side[0];
-			int y = this.y + height;
-			int z = offsetZ + side[1];
+			int x = position.x + side[0];
+			int y = position.y + height;
+			int z = position.z + side[1];
 			int[] vector = detVector(x, z);
 			for (int i = 2; i > 0; i--) {
 				world.setBlockWithNotify(x + vector[0], y, z, leaveID);
@@ -149,40 +115,56 @@ public class RedWorldFeatureToweringTree extends WorldFeature {
 	}
 
 	private int[] detVector(int x, int z) {
-		if (this.offsetX == x && this.offsetZ == z) {
+		if (position.x == x && position.z == z) {
 			return new int[]{-1, -1};
 		}
-		if (this.offsetX == x) {
+		if (position.x == x) {
 			return new int[]{-1, 1};
 		}
-		if (this.offsetZ == z) {
+		if (position.z == z) {
 			return new int[]{1, -1};
 		}
 		return new int[]{1, 1};
 	}
 
+	public void onTreeGrown() {
+		Block<?> dirt;
+		for (int[] offset : offsets) {
+			int x = position.x + offset[0];
+			int z = position.z + offset[1];
+			dirt = getDirtForGrass(world.getBlockId(x, position.y - 1, z));
+			if (dirt != null) {
+				world.setBlockWithNotify(x, position.y - 1, z, dirt.id());
+			}
+		}
+	}
+
+	public boolean canGrowOn() {
+		for (int[] offset : offsets) {
+			int idBelow = world.getBlockId(position.x + offset[0], position.y - 1, position.z + offset[1]);
+			if (!Blocks.hasTag(idBelow, BlockTags.GROWS_TREES)) {
+				return false;
+			}
+		}
+		return true;
+	}
+
 	public void placeTrunk() {
-		int idBelow = world.getBlockId(x, y - 1, z);
-		if (!Blocks.hasTag(idBelow, BlockTags.GROWS_TREES)) {
+		if (!canGrowOn()) {
 			return;
 		}
 		onTreeGrown();
 		for (int height = 0; height <= trunkHeight; height++) {
-			world.setBlockWithNotify(offsetX, y + height, offsetZ, logID);
-			world.setBlockWithNotify(offsetX, y + height, offsetZ + 1, logID);
-			world.setBlockWithNotify(offsetX + 1, y + height, offsetZ, logID);
-			world.setBlockWithNotify(offsetX + 1, y + height, offsetZ + 1, logID);
+			for (int[] offset : offsets) {
+				world.setBlockWithNotify(position.x + offset[0], position.y + height, position.z + offset[1], logID);
+			}
 		}
 	}
 
 	public boolean canPlaceTrunk() {
 		boolean canPlace = false;
-		for (int height = this.y + 1; height <= this.y + trunkHeight; height++) {
-			canPlace = canPlace | check2x2Area(offsetX, height, offsetZ, 0);
-			for (int leaveID : leaveIDs) {
-				canPlace = canPlace | check2x2Area(offsetX, height, offsetZ, leaveID);
-			}
-			if (!canPlace) {
+		for (int currentHeight = position.y + 1; currentHeight <= position.y + trunkHeight; currentHeight++) {
+			if (!is2x2AreaClear(position.x, currentHeight, position.z)) {
 				return false;
 			}
 		}
@@ -190,33 +172,48 @@ public class RedWorldFeatureToweringTree extends WorldFeature {
 	}
 
 	public void place2x2Area(int x, int y, int z, int blockID) {
-		this.world.setBlock(x, y, z, blockID);
-		this.world.setBlock(x, y, z + 1, blockID);
-		this.world.setBlock(x + 1, y, z, blockID);
-		this.world.setBlock(x + 1, y, z + 1, blockID);
-	}
-
-	public boolean check2x2Area(int x, int y, int z, int blockID) {
-		return this.world.getBlockId(x, y, z) == blockID
-			&& this.world.getBlockId(x, y, z + 1) == blockID
-			&& this.world.getBlockId(x + 1, y, z) == blockID
-			&& this.world.getBlockId(x + 1, y, z + 1) == blockID;
-	}
-
-	public boolean getBlockSquareOffset() {
 		for (int[] offset : offsets) {
-			int offsetX = offset[0];
-			int offsetZ = offset[1];
+			int offsetX = x + offset[0];
+			int offsetZ = z + offset[1];
+			world.setBlock(offsetX, y, offsetZ, blockID);
+		}
+	}
 
-			int adjX = offsetX + this.x;
-			int adjZ = offsetZ + this.z;
-
-			if (check2x2Area(adjX, this.y, adjZ, saplingID)) {
-				this.offsetX = x + offsetX;
-				this.offsetZ = z + offsetZ;
-				return true;
+	public boolean is2x2AreaClear(int x, int y, int z) {
+		for (int[] offset : offsets) {
+			int offsetX = x + offset[0];
+			int offsetZ = z + offset[1];
+			Block<?> block = world.getBlock(offsetX, y, offsetZ);
+			if (!isClear(block)) {
+				return false;
 			}
 		}
-		return false;
+		return true;
+	}
+
+	private boolean isClear(Block<?> block) {
+		if (block == null || block.id() == 0) {
+			return true;
+		} else {
+			return Block.hasLogicClass(block, BlockLogicLog.class) || Block.hasLogicClass(block, BlockLogicLeavesBase.class) || Block.hasLogicClass(block, BlockLogicFlower.class);
+		}
+	}
+
+	public static ChunkPosition findValid2x2SaplingCluster(World world, int x, int y, int z, int saplingID) {
+		int[][] originPoints = {{0, 0}, {0, -1}, {-1, -1}, {-1, 0}};
+		for (int[] originPoint : originPoints) {
+			int originX = x + originPoint[0];
+			int originZ = z + originPoint[1];
+			boolean check = true;
+			for (int[] offset : originPoints) {
+				int offsetX = originX - offset[0];
+				int offsetZ = originZ - offset[1];
+				check = check & world.getBlockId(offsetX, y, offsetZ) == saplingID;
+			}
+			if (check) {
+				return new ChunkPosition(originX, y, originZ);
+			}
+		}
+		return null;
 	}
 }
